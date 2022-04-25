@@ -1,0 +1,69 @@
+import darknet
+import darknet_images
+import cv2
+import time
+import os
+import shutil
+ 
+ 
+config_file='/sdk/projects/project1/notebooks/darknet/training2/model_trucks2/yolov-obj.cfg'
+data_file='/sdk/projects/project1/notebooks/darknet/training2/model_trucks2/truck.data'
+# weights='backup/11-23/yolov4-tiny_best.weights'
+weights='/sdk/projects/project1/notebooks/darknet/training2/backup6/yolov-obj_30000.weights'
+img_path='/sdk/projects/project1/notebooks/penta/ruledata/LT_f34f871b-4b4c-4639-88af-2c7bdad5b471/'
+result_path = '/sdk/projects/project1/notebooks/result/'
+label_path='/sdk/projects/project1/notebooks/result/'
+ 
+save_label = True #是否保存成yolo TXT标注，不保存的话，只做推理
+ 
+ 
+#load model
+network, class_names, colors = darknet.load_network(config_file, data_file, weights, batch_size=1)
+ 
+ 
+FileList = os.listdir(img_path)
+for filename in FileList:
+    img = os.path.join(img_path, filename)
+    image = cv2.imread(img)
+    image, detections = darknet_images.image_detection(img, network, class_names, colors, 0.1)
+    # os.rename(img , result_path + f'{filename}')
+    cv2.imwrite(result_path + f'{filename}', image)
+    
+    #识别结果写入label文件
+    if save_label:
+        txt_path = label_path + filename[:-4] + '.txt'
+        file = open(txt_path, 'w')
+        if len(detections)>0:
+            for car in detections:
+                print(car)
+                bbox = car[2]
+                print(bbox)
+                x1, y1, w, h = bbox[0],bbox[1],bbox[2],bbox[3]
+                x2 = x1 + w
+                y2 = y1 + h
+                label_x = x1 / image.shape[1]
+                label_y = y1 / image.shape[0]
+                label_w = w / image.shape[1]
+                label_h = h / image.shape[0]
+                #这里只有一类，所以class标号只有‘0’，可根据class.txt对应类别写入标号
+                if car[0] == 'alumivan':
+                    msg = '0' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n' 
+                elif car[0] == 'mixer':
+                    msg = '1' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n' 
+                elif car[0] == 'dump':
+                    msg = '2' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n'
+                elif car[0] == 'normalcar':
+                    msg = '3' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n'
+                elif car[0] == 'other':
+                    msg = '4' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n' 
+                elif car[0] == 'pump':
+                    msg = '5' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n'
+                elif car[0] == 'roughterrincrane':
+                    msg = '6' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n'        
+                elif car[0] == 'unic':
+                    msg = '5' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n'
+                elif car[0] == 'paracement':
+                    msg = '6' + ' ' + str(label_x) + ' '+ str(label_y) + ' '+ str(label_w) + ' '+ str(label_h)+'\n'  
+                file.write(msg)
+            file.close()
+            print("finish") 
